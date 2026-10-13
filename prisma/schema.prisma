@@ -1,0 +1,103 @@
+// ShiftStore Production Database Schema
+// Optimized for SQLite (self-contained, zero-cloud latency, instant deployment)
+// Can be effortlessly switched to PostgreSQL or Turso / libSQL by changing the provider.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PaymentMethod {
+  COD
+  RAZORPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?  @default("Store Admin")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Product {
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  subtitle      String?
+  description   String
+  originalPrice Int           // In INR (₹)
+  salePrice     Int           // In INR (₹)
+  badge         String?       // e.g. "PUJA DROP • 43 LEFT", "BESTSELLER"
+  images        String        // JSON array string of image URLs or SVGs
+  features      String        // JSON array string of feature bullet points
+  stock         Int           @default(50)
+  isHeroDrop    Boolean       @default(false)
+  isPublished   Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  bundleOffers  BundleOffer[]
+}
+
+model BundleOffer {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title           String   // e.g. "Buy 1 (Single Unit)" or "Buy 2 (Best Value)"
+  subtitle        String?  // e.g. "Save ₹700" or "Save 43% • Free Express Shipping"
+  quantity        Int      @default(1)
+  price           Int      // Total bundle price in INR (₹)
+  discountPercent Int      @default(0)
+  isPopular       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderNumber       String        @unique // e.g. "SS-PUJA-1042"
+  customerName      String
+  phone             String        // 10-digit Indian mobile number
+  address           String
+  pincode           String        // 6-digit Indian PIN code
+  totalAmount       Int           // Total in INR (₹)
+  paymentMethod     String        // "COD" or "RAZORPAY"
+  paymentStatus     String        @default("PENDING") // "PENDING", "PAID", "FAILED"
+  orderStatus       String        @default("NEW")     // "NEW", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  items             String        // JSON array string of purchased items [{productId, title, quantity, price}]
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
+
+model PincodeRule {
+  id             String   @id @default(cuid())
+  pincode        String   @unique // 6-digit PIN code
+  city           String?
+  state          String?
+  isCodAvailable Boolean  @default(true)
+  estimatedDays  Int      @default(3) // Delivery TAT in business days
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
