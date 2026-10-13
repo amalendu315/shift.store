@@ -29,4 +29,22 @@ declare module "next/navigation" {
   export function useRouter(): AppRouterInstance;
   export function usePathname(): string;
   export function useSearchParams(): URLSearchParams;
+  export function notFound(): never;
+}
+
+declare module "next/server" {
+  export class NextRequest extends Request {
+    cookies: {
+      get(name: string): { name: string; value: string } | undefined;
+      has(name: string): boolean;
+      getAll(): Array<{ name: string; value: string }>;
+    };
+    nextUrl: URL;
+  }
+
+  export class NextResponse extends Response {
+    static next(): NextResponse;
+    static redirect(url: string | URL, status?: number): NextResponse;
+    static json(body: any, init?: ResponseInit): NextResponse;
+  }
 }

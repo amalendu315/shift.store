@@ -65,16 +65,16 @@ app.post("/api/pincodes/check", (req: Request, res: Response) => {
       estimatedDays: match.estimatedDays,
       city: match.city,
       state: match.state,
-      message: `⚡ Express Delivery in ${match.estimatedDays} business days to ${match.city}. Cash on Delivery (COD) available!`,
+      message: `⚡ Dispatches within 24h from Siliguri hub. Delivery in ${match.estimatedDays} business days to ${match.city}. COD Available!`,
     });
   }
 
   // General India fallback heuristics
   const firstDigit = cleanPin[0];
-  let days = 3;
+  let days = 4;
   if (firstDigit === "7")
     days = 2; // Bengal & East hub
-  else if (firstDigit === "5" || firstDigit === "6") days = 4; // South
+  else if (firstDigit === "5" || firstDigit === "6") days = 5; // South
 
   res.json({
     success: true,
@@ -84,7 +84,7 @@ app.post("/api/pincodes/check", (req: Request, res: Response) => {
     estimatedDays: days,
     city: "India Metro / Tier-1",
     state: "India",
-    message: `⚡ Express Delivery in ${days}–${days + 1} business days. Cash on Delivery (COD) available!`,
+    message: `⚡ Dispatches within 24h from Siliguri hub. Delivery in ${days}–${days + 1} business days. COD Available!`,
   });
 });
 
@@ -134,10 +134,17 @@ app.post("/api/orders", (req: Request, res: Response) => {
       .json({ success: false, error: "Your order cart is empty." });
   }
 
-  const totalAmount = items.reduce(
+  const rawTotal = items.reduce(
     (sum: number, it: any) => sum + it.price * (it.quantity || 1),
     0,
   );
+
+  const isPrepaid = paymentMethod === "RAZORPAY";
+  const discountAmount = isPrepaid ? Math.round(rawTotal * 0.05) : 0;
+  const finalTotal = Math.max(0, rawTotal - discountAmount);
+  const discountNote = isPrepaid
+    ? ` [5% Instant Prepaid Discount Applied: -₹${discountAmount} off]`
+    : "";
 
   const orderNumber = getNextOrderNumber();
   const orderId = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -150,25 +157,25 @@ app.post("/api/orders", (req: Request, res: Response) => {
     phone: cleanedPhone,
     address: address.trim(),
     pincode: cleanedPincode,
-    totalAmount,
+    totalAmount: finalTotal,
     paymentMethod: paymentMethod || "COD",
     paymentStatus: paymentMethod === "COD" ? "PENDING" : "PENDING",
     orderStatus: paymentMethod === "COD" ? "CONFIRMED" : "NEW",
     items: JSON.stringify(items),
-    notes: notes || "Durga Puja Festive Order",
+    notes: (notes || "Durga Puja Festive Order") + discountNote,
     createdAt,
   };
 
   orders.unshift(newOrder);
 
-  // If Razorpay requested, construct Razorpay order details
+  // If Razorpay requested, construct Razorpay order details with 5% discount
   let razorpayOrderPayload = null;
   if (paymentMethod === "RAZORPAY") {
     const rzpOrderId = `order_${crypto.randomBytes(8).toString("hex")}`;
     newOrder.razorpayOrderId = rzpOrderId;
     razorpayOrderPayload = {
       id: rzpOrderId,
-      amount: totalAmount * 100, // paisa
+      amount: Math.round(rawTotal * 0.95) * 100, // paisa
       currency: "INR",
       keyId:
         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
@@ -179,9 +186,9 @@ app.post("/api/orders", (req: Request, res: Response) => {
   // Pre-filled WhatsApp notification message
   const whatsappText = encodeURIComponent(
     `🙏 Namaste ShiftStore Team!\n\n` +
-      `I placed festive order #${orderNumber} for ₹${totalAmount.toLocaleString("en-IN")}.\n` +
+      `I placed festive order #${orderNumber} for ₹${finalTotal.toLocaleString("en-IN")}.\n` +
       `👤 Customer: ${customerName}\n` +
-      `💳 Payment: ${paymentMethod === "COD" ? "Cash on Delivery (COD)" : "Prepaid UPI/Card"}\n` +
+      `💳 Payment: ${paymentMethod === "COD" ? "Cash on Delivery (COD)" : "Prepaid UPI/Card (5% Off Applied)"}\n` +
       `⚡ Please confirm priority air dispatch!`,
   );
 

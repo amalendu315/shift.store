@@ -652,11 +652,17 @@ export default function StorefrontPage() {
             rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <a href="/admin/login" className="hover:text-[#141412] underline">
-              Admin Portal
+            <a href="/about" className="hover:text-[#141412] underline">
+              Our Story
             </a>
             <span>·</span>
-            <span>Siliguri Fulfillment Center</span>
+            <a href="/contact" className="hover:text-[#141412] underline">
+              Contact Us
+            </a>
+            <span>·</span>
+            <a href="/policies" className="hover:text-[#141412] underline">
+              Store Policies
+            </a>
           </div>
         </div>
       </footer>

@@ -7,7 +7,7 @@ import {
   Percent,
   ArrowUpRight,
 } from "lucide-react";
-import { INITIAL_ORDERS, INITIAL_PRODUCTS } from "../../../prisma/seed.ts";
+import { INITIAL_ORDERS } from "../../../prisma/seed.ts";
 
 export default function AdminDashboardPage() {
   const totalRevenue = INITIAL_ORDERS.reduce(
@@ -29,18 +29,18 @@ export default function AdminDashboardPage() {
             Festive Operations Dashboard
           </h1>
           <p className="text-xs text-[#6b6963] mt-0.5">
-            ShiftStore India · Real-time Durga Puja Analytics
+            ShiftStore India · Internal Fulfillment Management
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/orders"
+            href="/manage-shiftstore/orders"
             className="px-3.5 py-2 bg-white border border-[#e7e1d6] rounded-lg text-xs font-semibold text-[#141412] hover:border-[#b48849]"
           >
             Manage Orders ({totalOrders})
           </Link>
           <Link
-            href="/admin/products"
+            href="/manage-shiftstore/products"
             className="px-3.5 py-2 bg-[#141412] text-[#f6f3ec] rounded-lg text-xs font-semibold hover:bg-[#2b2823]"
           >
             Configure Products
@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
             {festiveConversionRate}%
           </div>
           <div className="mt-2 text-[11px] text-emerald-700 font-medium">
-            Hero lander + bundle CRO
+            Hero lander + prepaid CRO
           </div>
         </div>
       </div>

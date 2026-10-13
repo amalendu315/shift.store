@@ -135,6 +135,14 @@ export async function createOrder(
       return { success: false, error: "Invalid order amount calculation." };
     }
 
+    // Enforce 5% prepaid discount server-side
+    const isPrepaid = input.paymentMethod === "RAZORPAY";
+    const discountAmount = isPrepaid ? Math.round(computedTotal * 0.05) : 0;
+    const finalTotal = Math.max(0, computedTotal - discountAmount);
+    const discountNote = isPrepaid
+      ? ` [5% Instant Prepaid Discount Applied: -₹${discountAmount} off]`
+      : "";
+
     const orderNumber = generateOrderNumber();
     const orderId = `ord-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const createdAt = new Date().toISOString();
@@ -163,12 +171,12 @@ export async function createOrder(
       phone: cleanedPhone,
       address: input.address.trim(),
       pincode: cleanedPincode,
-      totalAmount: computedTotal,
+      totalAmount: finalTotal,
       paymentMethod: input.paymentMethod,
       paymentStatus: input.paymentMethod === "COD" ? "PENDING" : "PENDING",
       orderStatus: input.paymentMethod === "COD" ? "CONFIRMED" : "NEW",
       items: JSON.stringify(input.items),
-      notes: input.notes || "Festive Durga Puja Order",
+      notes: (input.notes || "Festive Durga Puja Order") + discountNote,
       createdAt,
       updatedAt: createdAt,
     };
@@ -184,7 +192,7 @@ export async function createOrder(
 
       razorpayOrderPayload = {
         id: rzpOrderId,
-        amount: computedTotal * 100, // Razorpay uses paisa
+        amount: Math.round(computedTotal * 0.95) * 100, // Enforce 5% discount in paisa
         currency: "INR",
         keyId: razorpayKeyId,
       };
@@ -197,7 +205,7 @@ export async function createOrder(
       cleanedPhone,
       orderNumber,
       orderRecord.customerName,
-      computedTotal,
+      finalTotal,
       input.paymentMethod,
       whatsappStoreNumber,
     );

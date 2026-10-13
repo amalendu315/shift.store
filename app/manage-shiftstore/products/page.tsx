@@ -1,8 +1,3 @@
-/**
- * ShiftStore Next.js 14 Admin Products Management Page
- * File: app/admin/products/page.tsx
- */
-
 "use client";
 
 import React, { useState } from "react";
@@ -33,7 +28,7 @@ export default function AdminProductsPage() {
       <div className="flex items-center justify-between pb-4 border-b border-[#e7e1d6]">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/dashboard"
+            href="/manage-shiftstore/dashboard"
             className="p-1.5 text-[#6b6963] hover:text-[#141412] rounded-lg hover:bg-[#e7e1d6]/50"
           >
             <ArrowLeft className="w-5 h-5" />

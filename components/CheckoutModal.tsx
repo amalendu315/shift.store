@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import {
   X,
@@ -7,11 +6,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  MessageCircle,
   CreditCard,
   Banknote,
+  Zap,
+  Check,
 } from "lucide-react";
-import { checkPincode, PincodeCheckResult } from "../actions/pincode";
+import { checkPincode, PincodeCheckResult } from "../actions/pincode.ts";
 
 export interface CheckoutItem {
   productId: string;
@@ -38,7 +38,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"COD" | "RAZORPAY">("COD");
+
+  // Default is RAZORPAY (Prepaid-First conversion rate optimization)
+  const [paymentMethod, setPaymentMethod] = useState<"RAZORPAY" | "COD">(
+    "RAZORPAY",
+  );
 
   // Pincode validation & TAT state
   const [pincodeInfo, setPincodeInfo] = useState<PincodeCheckResult | null>(
@@ -51,11 +55,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  // Total calculation
-  const totalAmount = items.reduce(
+  // Total and 5% prepaid discount calculation
+  const baseTotal = items.reduce(
     (sum, item) => sum + item.price * (item.quantity || 1),
     0,
   );
+  const prepaidDiscount = Math.round(baseTotal * 0.05);
+  const prepaidFinalTotal = Math.max(0, baseTotal - prepaidDiscount);
+  const currentPayable =
+    paymentMethod === "RAZORPAY" ? prepaidFinalTotal : baseTotal;
 
   // Real-time pincode checker
   useEffect(() => {
@@ -66,6 +74,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       checkPincode(cleanPin)
         .then((res) => {
           setPincodeInfo(res);
+          // If COD is not available for this pincode, ensure prepaid remains selected
           if (!res.isCodAvailable && paymentMethod === "COD") {
             setPaymentMethod("RAZORPAY");
           }
@@ -133,7 +142,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           pincode: pincode.trim(),
           items,
           paymentMethod,
-          notes: "Durga Puja Festive Express Order",
+          notes:
+            paymentMethod === "RAZORPAY"
+              ? "Prepaid Online (5% Discount Applied)"
+              : "Cash on Delivery",
         }),
       });
 
@@ -148,10 +160,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         if (typeof (window as any).Razorpay !== "undefined") {
           const options = {
             key: data.razorpayOrder.keyId || "rzp_test_ShiftStorePuja2026",
-            amount: data.razorpayOrder.amount,
+            amount: data.razorpayOrder.amount, // Server-calculated discounted amount in paisa
             currency: "INR",
             name: "ShiftStore India",
-            description: "Durga Puja Festive Order",
+            description:
+              "Durga Puja Festive Order (5% Prepaid Discount Applied)",
             order_id: data.razorpayOrder.id,
             prefill: {
               name: customerName,
@@ -162,7 +175,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             },
             handler: async function (response: any) {
               // Verify server-side
-              const verifyRes = await fetch("/api/razorpay/verify", {
+              await fetch("/api/razorpay/verify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -175,7 +188,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     response.razorpay_signature || "mock_sig_" + Date.now(),
                 }),
               });
-              const verifyData = await verifyRes.json();
               onOrderSuccess({
                 ...data.order,
                 paymentStatus: "PAID",
@@ -193,7 +205,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           rzp.open();
           return;
         } else {
-          // Fallback simulation for dev environment if script blocked
+          // Dev simulated success
           onOrderSuccess({
             ...data.order,
             paymentStatus: "PAID",
@@ -225,14 +237,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e7e1d6] bg-[#f0ece1]/70">
           <div>
-            <span className="text-[11px] font-semibold tracking-wider text-[#b48849] uppercase">
-              ⚡ Durga Puja Express Checkout
+            <span className="text-[11px] font-semibold tracking-wider text-[#b48849] uppercase flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Durga Puja Express Checkout</span>
             </span>
             <h2
               id="modal-title"
               className="text-xl font-bold font-serif text-[#141412]"
             >
-              Confirm Your Delivery
+              Confirm Delivery & Payment
             </h2>
           </div>
           <button
@@ -256,14 +269,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </div>
           )}
 
-          {/* Cart Item Summary Pill */}
-          <div className="p-3.5 bg-[#f0ece1]/60 rounded-xl border border-[#e7e1d6] space-y-2">
+          {/* Cart Item Summary & Dynamic Pricing */}
+          <div className="p-4 bg-[#f0ece1]/70 rounded-xl border border-[#e7e1d6] space-y-2.5">
             <div className="flex justify-between items-center text-xs text-[#6b6963]">
-              <span>Selected Item(s)</span>
-              <span className="font-medium text-[#141412]">
-                Festive Discount Applied
-              </span>
+              <span>Order Summary</span>
+              {paymentMethod === "RAZORPAY" ? (
+                <span className="text-emerald-800 font-semibold flex items-center gap-1">
+                  <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600" />
+                  5% Online Payment Discount Applied
+                </span>
+              ) : (
+                <span className="text-[#6b6963]">Standard Festive Pricing</span>
+              )}
             </div>
+
             {items.map((it, idx) => (
               <div
                 key={idx}
@@ -282,13 +301,151 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </span>
               </div>
             ))}
-            <div className="pt-2 border-t border-[#e7e1d6]/80 flex justify-between items-center text-sm">
-              <span className="text-xs font-semibold text-[#b48849] uppercase tracking-wider">
-                Total Payable
+
+            {/* Dynamic Total Row */}
+            <div className="pt-2.5 border-t border-[#e7e1d6] flex justify-between items-baseline">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-[#141412] block">
+                  Total Payable
+                </span>
+                {paymentMethod === "RAZORPAY" && (
+                  <span className="text-[11px] text-emerald-700 font-medium">
+                    You save ₹{prepaidDiscount.toLocaleString("en-IN")} with
+                    Prepaid!
+                  </span>
+                )}
+              </div>
+
+              <div className="text-right">
+                {paymentMethod === "RAZORPAY" ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xs text-[#6b6963] line-through tabular-nums">
+                      ₹{baseTotal.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-xl font-bold font-serif text-emerald-800 tabular-nums">
+                      ₹{prepaidFinalTotal.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-xl font-bold font-serif text-[#141412] tabular-nums">
+                    ₹{baseTotal.toLocaleString("en-IN")}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method Selector (Prepaid-First Architecture) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-[#141412] uppercase tracking-wider">
+                Select Payment Method
+              </label>
+              <span className="text-[11px] text-emerald-700 font-bold">
+                ⚡ Recommended: Instant UPI / Card
               </span>
-              <span className="text-lg font-bold tabular-nums text-[#141412]">
-                ₹{totalAmount.toLocaleString("en-IN")}
-              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2.5">
+              {/* Option 1: Instant Prepaid (FIRST & DEFAULT) */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("RAZORPAY")}
+                className={`p-3.5 rounded-xl border text-left transition-all relative ${
+                  paymentMethod === "RAZORPAY"
+                    ? "border-emerald-600 bg-emerald-50/50 ring-2 ring-emerald-500/20 shadow-xs"
+                    : "border-[#e7e1d6] bg-white hover:border-[#b48849]/50"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-[#141412]">
+                          Instant UPI / Cards / Net Banking
+                        </span>
+                        <span className="text-[10px] font-bold bg-emerald-700 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          ⚡ EXTRA 5% OFF
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#6b6963] mt-0.5">
+                        GPay, PhonePe, Paytm, All Cards · Priority Same-Day
+                        Dispatch
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-bold text-xs text-emerald-800 tabular-nums">
+                      ₹{prepaidFinalTotal.toLocaleString("en-IN")}
+                    </div>
+                    {paymentMethod === "RAZORPAY" && (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 ml-auto mt-1" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* Option 2: Cash on Delivery (COD) (SECOND OPTION - Placed BELOW prepaid) */}
+              <button
+                type="button"
+                disabled={pincodeInfo !== null && !pincodeInfo.isCodAvailable}
+                onClick={() => {
+                  if (pincodeInfo && !pincodeInfo.isCodAvailable) return;
+                  setPaymentMethod("COD");
+                }}
+                className={`p-3.5 rounded-xl border text-left transition-all relative ${
+                  pincodeInfo !== null && !pincodeInfo.isCodAvailable
+                    ? "border-gray-200 bg-gray-50/80 opacity-70 cursor-not-allowed"
+                    : paymentMethod === "COD"
+                      ? "border-[#b48849] bg-[#fbf9f4] ring-2 ring-[#b48849]/20 shadow-xs"
+                      : "border-[#e7e1d6] bg-white hover:border-[#b48849]/40"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-[#f0ece1] flex items-center justify-center text-[#b48849] shrink-0">
+                      <Banknote className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-[#141412]">
+                          Cash on Delivery (COD)
+                        </span>
+                        {pincodeInfo !== null &&
+                          !pincodeInfo.isCodAvailable && (
+                            <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                              Unavailable
+                            </span>
+                          )}
+                      </div>
+                      {pincodeInfo !== null && !pincodeInfo.isCodAvailable ? (
+                        <p className="text-[11px] text-amber-800 font-medium mt-1">
+                          COD not available for this PIN code. Please pay via
+                          UPI/Card for priority dispatch.
+                        </p>
+                      ) : (
+                        <p className="text-[11px] text-[#6b6963] mt-0.5">
+                          Pay cash upon arrival at doorstep · Standard price (No
+                          online discount)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-bold text-xs text-[#141412] tabular-nums">
+                      ₹{baseTotal.toLocaleString("en-IN")}
+                    </div>
+                    {paymentMethod === "COD" && (
+                      <CheckCircle2 className="w-4 h-4 text-[#b48849] ml-auto mt-1" />
+                    )}
+                  </div>
+                </div>
+              </button>
             </div>
           </div>
 
@@ -370,15 +527,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               className="w-full px-3.5 py-2.5 bg-white border border-[#e7e1d6] rounded-lg text-sm text-[#141412] focus:outline-none focus:border-[#b48849] focus:ring-1 focus:ring-[#b48849] transition-all tabular-nums placeholder:text-[#6b6963]/60"
             />
 
-            {/* Pincode turnaround response banner */}
             {pincodeInfo && (
               <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-start gap-2 text-xs text-emerald-800">
                 <Truck className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
                 <div>
                   <p className="font-semibold">{pincodeInfo.message}</p>
                   <p className="text-[11px] text-emerald-700 mt-0.5">
-                    Hub: {pincodeInfo.city || "Pan-India"} · Festive priority
-                    route
+                    Dispatches from Siliguri hub within 24 hours.
                   </p>
                 </div>
               </div>
@@ -386,62 +541,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {pincodeError && (
               <p className="mt-1.5 text-xs text-amber-700">{pincodeError}</p>
             )}
-          </div>
-
-          {/* Payment Method Selector */}
-          <div>
-            <label className="block text-xs font-semibold text-[#141412] mb-2 uppercase tracking-wider">
-              Select Payment Method
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* COD Option */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("COD")}
-                className={`p-3.5 rounded-xl border text-left transition-all relative ${
-                  paymentMethod === "COD"
-                    ? "border-[#b48849] bg-[#fbf9f4] ring-1 ring-[#b48849]"
-                    : "border-[#e7e1d6] bg-white hover:border-[#b48849]/50"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <Banknote className="w-5 h-5 text-[#b48849]" />
-                  {paymentMethod === "COD" && (
-                    <CheckCircle2 className="w-4 h-4 text-[#b48849]" />
-                  )}
-                </div>
-                <div className="font-semibold text-xs text-[#141412]">
-                  Cash on Delivery
-                </div>
-                <div className="text-[11px] text-[#6b6963] mt-0.5">
-                  Pay in cash at doorstep
-                </div>
-              </button>
-
-              {/* Instant Razorpay Option */}
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("RAZORPAY")}
-                className={`p-3.5 rounded-xl border text-left transition-all relative ${
-                  paymentMethod === "RAZORPAY"
-                    ? "border-[#b48849] bg-[#fbf9f4] ring-1 ring-[#b48849]"
-                    : "border-[#e7e1d6] bg-white hover:border-[#b48849]/50"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <CreditCard className="w-5 h-5 text-[#b48849]" />
-                  {paymentMethod === "RAZORPAY" && (
-                    <CheckCircle2 className="w-4 h-4 text-[#b48849]" />
-                  )}
-                </div>
-                <div className="font-semibold text-xs text-[#141412]">
-                  Instant UPI / Cards
-                </div>
-                <div className="text-[11px] text-[#6b6963] mt-0.5">
-                  GPay, PhonePe, Cards
-                </div>
-              </button>
-            </div>
           </div>
 
           {/* Trust Guarantees */}
@@ -456,24 +555,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             </span>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action CTA Button */}
           <div className="pt-1">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 px-4 bg-[#141412] hover:bg-[#2b2823] text-[#f6f3ec] rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] disabled:opacity-75 disabled:pointer-events-none"
+              className={`w-full py-4 px-4 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99] disabled:opacity-75 disabled:pointer-events-none ${
+                paymentMethod === "RAZORPAY"
+                  ? "bg-emerald-800 hover:bg-emerald-900 text-white"
+                  : "bg-[#141412] hover:bg-[#2b2823] text-[#f6f3ec]"
+              }`}
             >
               {isSubmitting ? (
                 <span className="inline-flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[#f6f3ec] border-t-transparent rounded-full animate-spin" />
-                  Securing Your Festive Order...
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Securing Your Order...
                 </span>
               ) : (
                 <span>
-                  {paymentMethod === "COD"
-                    ? "CONFIRM CASH ON DELIVERY • "
-                    : "PAY WITH UPI / CARD • "}
-                  ₹{totalAmount.toLocaleString("en-IN")}
+                  {paymentMethod === "RAZORPAY"
+                    ? `PAY WITH UPI / CARD • ₹${prepaidFinalTotal.toLocaleString("en-IN")} (SAVE ₹${prepaidDiscount})`
+                    : `CONFIRM CASH ON DELIVERY • ₹${baseTotal.toLocaleString("en-IN")}`}
                 </span>
               )}
             </button>

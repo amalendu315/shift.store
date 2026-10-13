@@ -1,3 +1,8 @@
+/**
+ * ShiftStore Next.js 14 Secure Admin Login Page
+ * Route: /manage-shiftstore/login
+ */
+
 "use client";
 
 import React, { useState } from "react";
@@ -28,7 +33,7 @@ export default function AdminLoginPage() {
         throw new Error(data.error || "Invalid credentials");
       }
 
-      router.push("/admin/dashboard");
+      router.push("/manage-shiftstore/dashboard");
     } catch (err: any) {
       setError(err.message || "Failed to sign in");
     } finally {
@@ -44,10 +49,10 @@ export default function AdminLoginPage() {
             <Lock className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-serif font-bold text-[#141412]">
-            ShiftStore Admin Portal
+            ShiftStore Operations
           </h1>
           <p className="text-xs text-[#6b6963]">
-            Festive Operations & Order Fulfillment Console
+            Internal Fulfillment & Catalog Management
           </p>
         </div>
 
