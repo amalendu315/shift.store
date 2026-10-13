@@ -1,0 +1,6 @@
+{
+  "name": "ShiftStore — Warm Minimalist DTC Decor & Hero Drops",
+  "description": "High-converting DTC e-commerce shop for luxury home decor and single-product hero drops with COD, Razorpay UPI, and WhatsApp Quick Checkout.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
