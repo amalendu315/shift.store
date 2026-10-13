@@ -37,25 +37,25 @@ The application will be live at `http://localhost:3000`.
 
 ```env
 # Database: SQLite local path (or Turso libSQL url for serverless edge)
-DATABASE_URL="file:./prisma/dev.db"
+DATABASE_URL=""
 
 # Admin Authentication
-ADMIN_EMAIL="admin@shiftstore.in"
-ADMIN_PASSWORD_HASH="$2a$10$wB9Vp9J9V1lS8ZtY4O1s7.ZzY1jT4X6W9K8L7M6N5O4P3Q2R1S0T"
-ADMIN_DEFAULT_PASSWORD="PujaSale2026!"
-SESSION_SECRET="shiftstore_festive_secret_key_9876543210_durga_puja"
+ADMIN_EMAIL=""
+ADMIN_PASSWORD_HASH=""
+ADMIN_DEFAULT_PASSWORD=""
+SESSION_SECRET=""
 
 # Razorpay Payment Gateway (Test or Production live keys)
-NEXT_PUBLIC_RAZORPAY_KEY_ID="rzp_test_ShiftStorePuja2026"
-RAZORPAY_KEY_SECRET="rzp_sec_mock_festive_secret_key"
+NEXT_PUBLIC_RAZORPAY_KEY_ID=""
+RAZORPAY_KEY_SECRET=""
 
 # Store & WhatsApp Configuration
-NEXT_PUBLIC_STORE_NAME="ShiftStore India"
-NEXT_PUBLIC_SUPPORT_PHONE="+91 98765 43210"
-NEXT_PUBLIC_WHATSAPP_NUMBER="919876543210"
-NEXT_PUBLIC_CURRENCY_SYMBOL="₹"
+NEXT_PUBLIC_STORE_NAME=""
+NEXT_PUBLIC_SUPPORT_PHONE=""
+NEXT_PUBLIC_WHATSAPP_NUMBER=""
+NEXT_PUBLIC_CURRENCY_SYMBOL=""
 
-PORT=3000
+PORT=
 ```
 
 ---
@@ -99,8 +99,8 @@ If deploying directly as a Next.js 14 App Router project on Vercel:
 
 ## 4. Admin Access & Credentials
 - **URL**: `/admin` (or `/admin/login`)
-- **Default Email**: `admin@shiftstore.in`
-- **Default Password**: `PujaSale2026!`
+- **Default Email**: ``
+- **Default Password**: ``
 - **Capabilities**:
   - Live KPI Revenue, Orders, Pending COD counts, and CRO rate.
   - 1-Click WhatsApp Customer Confirmation (`wa.me/{phone}?text=...`).
