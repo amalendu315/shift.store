@@ -2,20 +2,20 @@
 
 @layer base {
   :root {
-    --cream: #f6f3ec;
-    --ink: #141412;
-    --gold: #b48849;
-    --muted: #6b6963;
-    --border-line: #e7e1d6;
+    --bg-warm: #fcfcf7;
+    --text-brown: #3d281a;
+    --accent-gold: #a87c4f;
+    --border-warm: #e8e1d7;
+    --footer-dark: #2c1c11;
   }
 
   body {
-    background-color: #f6f3ec;
-    color: #141412;
+    background-color: #fcfcf7;
+    color: #3d281a;
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
-  h1, h2, h3, .font-serif {
+  h1, h2, h3, h4, .font-serif {
     font-family: 'Cormorant Garamond', Georgia, serif;
   }
 }

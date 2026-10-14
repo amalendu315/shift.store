@@ -1,687 +1,836 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
+  Search,
+  User,
   ShoppingBag,
+  Sparkles,
+  ArrowRight,
   ShieldCheck,
   Truck,
-  MessageCircle,
-  PackageCheck,
-  Star,
-  ChevronDown,
-  Sparkles,
   CheckCircle2,
   Clock,
-  ArrowRight,
-  Flame,
-  Lock,
   RotateCcw,
-  Check,
+  Heart,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
-import {
-  INITIAL_PRODUCTS_DATA,
-  INITIAL_REVIEWS,
-  FAQS_DATA,
-  VALUE_PROPOSITIONS,
-  SHIFTSTORE_STORY,
-  CORE_POLICIES,
-  ProductItem,
-  BundleItem,
-} from "../src/data/store.ts";
-import { ProductVisual } from "../src/components/ProductVisual.tsx";
-import { CheckoutModal, CheckoutItem } from "../components/CheckoutModal.tsx";
-import { OrderSuccessModal } from "../src/components/OrderSuccessModal.tsx";
+import { ProductCard } from "../components/ProductCard";
+import HeroSlider from "../components/HeroSlider";
 
-export default function StorefrontPage() {
-  const [products, setProducts] = useState<ProductItem[]>(
-    INITIAL_PRODUCTS_DATA,
-  );
-  const heroProduct = products.find((p) => p.isHeroDrop) || products[0];
+// Mock Data for the 3 Grids
+const FESTIVE_COLLECTION = [
+  {
+    id: "fc-1",
+    title: "Handcrafted Festive Brass Diya Set with Pedestal",
+    slug: "festive-brass-diya-set",
+    category: "Festive",
+    price: 1399,
+    originalPrice: 1999,
+    image:
+      "https://images.unsplash.com/photo-1514517521153-1be72277b32f?auto=format&fit=crop&w=800&q=80",
+    badge: "Puja Special",
+    inStock: true,
+  },
+  {
+    id: "fc-2",
+    title: "Zen Buddha Head Ceramic Sculpture in Sand Matte",
+    slug: "zen-buddha-decor",
+    category: "Festive",
+    price: 1499,
+    originalPrice: 2249,
+    image:
+      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=800&q=80",
+    badge: "Bestseller",
+    inStock: true,
+  },
+  {
+    id: "fc-3",
+    title: "Lotus Brass Incense Burner & Essential Oil Urli",
+    slug: "lotus-brass-incense-burner",
+    category: "Festive",
+    price: 1199,
+    originalPrice: 1699,
+    image:
+      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=800&q=80",
+    badge: "Handcrafted",
+    inStock: true,
+  },
+  {
+    id: "fc-4",
+    title: "Gilded Floral Marigold Ceramic Accent Plate",
+    slug: "gilded-floral-plate",
+    category: "Festive",
+    price: 899,
+    originalPrice: 1399,
+    image:
+      "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?auto=format&fit=crop&w=800&q=80",
+    badge: "Limited Stock",
+    inStock: true,
+  },
+];
 
-  // Selected bundle for Hero Product
-  const [selectedBundle, setSelectedBundle] = useState<BundleItem>(
-    heroProduct.bundles.find((b) => b.isPopular) || heroProduct.bundles[0],
-  );
+const HANDPICKED_COLLECTION = [
+  {
+    id: "hp-1",
+    title: "Artisan Ribbed Ceramic Urn Vase in Warm Off-White",
+    slug: "minimal-ceramic-vase",
+    category: "Vases",
+    price: 999,
+    originalPrice: 1499,
+    image:
+      "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=800&q=80",
+    badge: "Trending",
+    inStock: true,
+  },
+  {
+    id: "hp-2",
+    title: "Ceramic Dough Donut Sculptural Vase in Beige Stone",
+    slug: "donut-sculptural-vase",
+    category: "Vases",
+    price: 1199,
+    originalPrice: 1699,
+    image:
+      "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=800&q=80",
+    badge: "Curator's Choice",
+    inStock: true,
+  },
+  {
+    id: "hp-3",
+    title: "Amber Glass Aromatherapy Diffuser with Rattan Reeds",
+    slug: "luxury-aroma-set",
+    category: "Tabletop",
+    price: 799,
+    originalPrice: 1199,
+    image:
+      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=800&q=80",
+    inStock: true,
+  },
+  {
+    id: "hp-4",
+    title: "Architectural Fluted Matte Stoneware Planter",
+    slug: "modern-planter",
+    category: "Tabletop",
+    price: 899,
+    originalPrice: 1299,
+    image:
+      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=800&q=80",
+    inStock: true,
+  },
+];
 
-  // Cart / Checkout Modal state
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
-  const [confirmedOrder, setConfirmedOrder] = useState<any>(null);
+const PREMIUM_DECOR = [
+  {
+    id: "pd-1",
+    title: "Textured Arch Plaster Wall Canvas in Ochre & Clay",
+    slug: "textured-arch-wall-canvas",
+    category: "Wall Art",
+    price: 1899,
+    originalPrice: 2799,
+    image:
+      "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80",
+    badge: "Exclusive",
+    inStock: true,
+  },
+  {
+    id: "pd-2",
+    title: "Brushed Brass & Smoked Amber Glow Table Lamp",
+    slug: "brass-amber-glow-lamp",
+    category: "Lighting",
+    price: 2499,
+    originalPrice: 3499,
+    image:
+      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80",
+    badge: "Signature",
+    inStock: true,
+  },
+  {
+    id: "pd-3",
+    title: "Minimalist Terrazzo Oval Catchall Vanity Tray",
+    slug: "terrazzo-catchall-tray",
+    category: "Tabletop",
+    price: 649,
+    originalPrice: 999,
+    image:
+      "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?auto=format&fit=crop&w=800&q=80",
+    inStock: true,
+  },
+  {
+    id: "pd-4",
+    title: "Organic Wavy Travertine Pedestal Centerpiece",
+    slug: "travertine-pedestal-centerpiece",
+    category: "Sculptures",
+    price: 2199,
+    originalPrice: 3199,
+    image:
+      "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?auto=format&fit=crop&w=800&q=80",
+    badge: "Hand Carved",
+    inStock: true,
+  },
+];
 
-  // FAQ Accordion state
-  const [openFaqId, setOpenFaqId] = useState<string | null>("faq-1");
+// Circular Categories Data
+const CIRCULAR_CATEGORIES = [
+  {
+    name: "Wall Art",
+    image:
+      "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=300&q=80",
+    href: "/shop?cat=Wall%20Art",
+  },
+  {
+    name: "Vases",
+    image:
+      "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=300&q=80",
+    href: "/shop?cat=Vases",
+  },
+  {
+    name: "Festive",
+    image:
+      "https://images.unsplash.com/photo-1514517521153-1be72277b32f?auto=format&fit=crop&w=300&q=80",
+    href: "/shop?cat=Festive",
+  },
+  {
+    name: "Lighting",
+    image:
+      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=300&q=80",
+    href: "/shop?cat=Lighting",
+  },
+  {
+    name: "Tabletop",
+    image:
+      "https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=300&q=80",
+    href: "/shop?cat=Tabletop",
+  },
+];
 
-  // Buy hero bundle now
-  const handleBuyHeroBundle = () => {
-    setCheckoutItems([
-      {
-        productId: heroProduct.id,
-        title: `${heroProduct.title} (${selectedBundle.title})`,
-        quantity: selectedBundle.quantity,
-        price: Math.round(selectedBundle.price / selectedBundle.quantity),
-      },
-    ]);
-    setIsCheckoutOpen(true);
+// 6 Shop by Theme Circular Items
+const THEMES = [
+  {
+    name: "Minimalist",
+    image:
+      "https://images.unsplash.com/photo-1616046229478-9901c5536a45?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Traditional",
+    image:
+      "https://images.unsplash.com/photo-1514517521153-1be72277b32f?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Modern",
+    image:
+      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Bohemian",
+    image:
+      "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Earth & Clay",
+    image:
+      "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=400&q=80",
+  },
+  {
+    name: "Sculptural",
+    image:
+      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=400&q=80",
+  },
+];
+
+// Hero Carousel Slides Data
+interface HeroSlide {
+  id: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  primaryBtnText: string;
+  primaryCategory?: string;
+  secondaryBtnText: string;
+  image: string;
+  imageAlt: string;
+  badgeLabel: string;
+  productTitle: string;
+  productPrice: number;
+  productOriginalPrice: number;
+  productSlug: string;
+  bgColor: string;
+}
+
+const HERO_SLIDES: HeroSlide[] = [
+  {
+    id: "slide-1",
+    eyebrow: "✦ Durga Puja Special · Limited Edition Drops",
+    title: "Artisan Home Decor",
+    subtitle:
+      "We source premium, aesthetically striking home décor pieces for spaces that deserve quiet warmth. Dispatched within 24 hours from our Siliguri fulfillment center.",
+    primaryBtnText: "Shop Festive Drops",
+    primaryCategory: "Festive",
+    secondaryBtnText: "Explore All Decor",
+    image:
+      "https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Zen Buddha Head Ceramic Sculpture in Sand Matte",
+    badgeLabel: "Hero Festive Drop",
+    productTitle: "Zen Buddha Head Ceramic",
+    productPrice: 1499,
+    productOriginalPrice: 2249,
+    productSlug: "zen-buddha-decor",
+    bgColor: "#f5efe6",
+  },
+  {
+    id: "slide-2",
+    eyebrow: "✦ Hand-Thrown Stoneware · Sculptural Silhouettes",
+    title: "Sculpted for Everyday Stillness",
+    subtitle:
+      "Warm off-white ribbed urns and donut ceramic vases designed to elevate sideboards, coffee tables, and mantelpieces with earthy organic textures.",
+    primaryBtnText: "Discover Artisan Vases",
+    primaryCategory: "Vases",
+    secondaryBtnText: "View Tabletop Pieces",
+    image:
+      "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Artisan Ribbed Ceramic Urn Vase in Warm Off-White",
+    badgeLabel: "Trending Curation",
+    productTitle: "Ribbed Ceramic Urn Vase",
+    productPrice: 999,
+    productOriginalPrice: 1499,
+    productSlug: "minimal-ceramic-vase",
+    bgColor: "#f6f1e8",
+  },
+  {
+    id: "slide-3",
+    eyebrow: "✦ Ambient Lighting & Aromatherapy · Quiet Luxury",
+    title: "Light That Warms Your Sanctuary",
+    subtitle:
+      "Smoked amber glass table lamps and botanical reed diffuser sets crafted to infuse your living room with golden evening radiance and natural scents.",
+    primaryBtnText: "Explore Ambient Lighting",
+    primaryCategory: "Lighting",
+    secondaryBtnText: "View Fragrance Sets",
+    image:
+      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Brushed Brass & Smoked Amber Glow Table Lamp",
+    badgeLabel: "Signature Glow",
+    productTitle: "Smoked Amber Glow Lamp",
+    productPrice: 2499,
+    productOriginalPrice: 3499,
+    productSlug: "brass-amber-glow-lamp",
+    bgColor: "#f3ede2",
+  },
+];
+
+export default function HomePage() {
+  const [cartCount, setCartCount] = useState(0);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Hero Carousel State
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+  const [isHeroPaused, setIsHeroPaused] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
+  // Autoplay Slider Timer (5.5s)
+  useEffect(() => {
+    if (isHeroPaused) return;
+    const timer = setInterval(() => {
+      setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, [isHeroPaused]);
+
+  const handlePrevSlide = () => {
+    setCurrentHeroSlide((prev) =>
+      prev === 0 ? HERO_SLIDES.length - 1 : prev - 1,
+    );
   };
 
-  // Buy catalog item
-  const handleBuyCatalogItem = (product: ProductItem) => {
-    setCheckoutItems([
-      {
-        productId: product.id,
-        title: product.title,
-        quantity: 1,
-        price: product.salePrice,
-      },
-    ]);
-    setIsCheckoutOpen(true);
+  const handleNextSlide = () => {
+    setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (diff > 50) handleNextSlide();
+    else if (diff < -50) handlePrevSlide();
+    setTouchStartX(null);
+  };
+
+  const handleAddToCart = (product: { title: string }) => {
+    setCartCount((c) => c + 1);
+    setToastMessage(`Added "${product.title}" to cart`);
+    setTimeout(() => setToastMessage(null), 2500);
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f3ec] text-[#141412] flex flex-col font-sans selection:bg-[#b48849] selection:text-white pb-24 sm:pb-12">
-      {/* 1. Global Announcement Bar (Top of screen) */}
-      <div className="bg-[#141412] text-[#f6f3ec] py-2 px-4 text-center text-xs tracking-wider font-medium flex items-center justify-center gap-2">
+    <div className="min-h-screen bg-[#fcfcf7] text-[#3d281a] flex flex-col font-sans selection:bg-[#a87c4f] selection:text-white">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-6 z-50 bg-[#3d281a] text-[#fcfcf7] px-4 py-3 rounded-lg shadow-xl text-xs font-medium flex items-center gap-2 border border-[#a87c4f] animate-in fade-in slide-in-from-top-2">
+          <Sparkles className="w-4 h-4 text-[#a87c4f]" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* ========================================================
+          A. HEADER & ANNOUNCEMENT
+      ======================================================== */}
+      {/* Top thin announcement bar with dark brown background and white text */}
+      <div className="bg-[#3d281a] text-[#fcfcf7] text-center text-xs py-2 px-4 tracking-wider uppercase font-medium flex items-center justify-center gap-2 border-b border-[#3d281a]/10">
         <span>
           ⚡ PUJA SPECIAL: FLAT 33% OFF + FREE FAST SHIPPING • COD AVAILABLE
           ACROSS INDIA
         </span>
       </div>
 
-      {/* 2. Top Navigation Bar */}
-      <header className="sticky top-0 z-30 bg-[#f6f3ec]/90 backdrop-blur-md border-b border-[#e7e1d6] px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
-          <a
-            href="#"
-            className="font-serif text-2xl font-bold tracking-tight text-[#141412] whitespace-nowrap shrink-0"
-          >
-            ShiftStore
-          </a>
+      {/* Main Header */}
+      <header className="sticky top-0 z-40 bg-[#fcfcf7]/95 backdrop-blur-md border-b border-[#e8e1d7] transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between">
+          {/* Logo Left */}
+          <Link href="/" className="flex items-center gap-2 group">
+            <span className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-[#3d281a] group-hover:text-[#a87c4f] transition-colors">
+              ShiftStore
+            </span>
+          </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold uppercase tracking-wider text-[#6b6963]">
-            <a
-              href="#hero-section"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+          {/* Centered Navigation Links */}
+          <nav className="hidden md:flex items-center gap-8 text-xs font-semibold tracking-wider uppercase">
+            <Link
+              href="/"
+              className="text-[#a87c4f] border-b-2 border-[#a87c4f] pb-1"
             >
-              Featured
-            </a>
-            <a
-              href="#festive-catalog"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+              Home
+            </Link>
+            <Link
+              href="/shop?cat=Decor"
+              className="text-[#3d281a] hover:text-[#a87c4f] transition-colors"
             >
-              Collection
-            </a>
-            <a
-              href="#why-us"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+              Decor
+            </Link>
+            <Link
+              href="/shop?cat=Festive"
+              className="text-[#3d281a] hover:text-[#a87c4f] transition-colors"
             >
-              Why Us
-            </a>
-            <a
-              href="#about-story"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+              Festive
+            </Link>
+            <Link
+              href="/shop"
+              className="text-[#3d281a] hover:text-[#a87c4f] transition-colors"
             >
-              Our Story
-            </a>
-            <a
-              href="#reviews"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+              Shop All
+            </Link>
+            <Link
+              href="/about"
+              className="text-[#3d281a] hover:text-[#a87c4f] transition-colors"
             >
-              Reviews
-            </a>
-            <a
-              href="#faqs"
-              className="hover:text-[#141412] transition-colors whitespace-nowrap shrink-0"
+              About
+            </Link>
+            <Link
+              href="/contact"
+              className="text-[#3d281a] hover:text-[#a87c4f] transition-colors"
             >
-              FAQs & COD
-            </a>
+              Contact
+            </Link>
           </nav>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <a
-              href="#hero-section"
-              className="px-4 py-2 text-xs font-semibold text-[#f6f3ec] bg-[#141412] rounded-lg hover:bg-[#2b2823] transition-colors whitespace-nowrap shrink-0 flex items-center gap-2"
+          {/* Right-side Icons */}
+          <div className="flex items-center gap-4 text-[#3d281a]">
+            <Link
+              href="/shop"
+              className="p-2 hover:text-[#a87c4f] transition-colors"
+              aria-label="Search items"
             >
-              <ShoppingBag className="w-3.5 h-3.5 text-[#b48849]" />
-              <span>Shop Collection</span>
-            </a>
+              <Search className="w-5 h-5" />
+            </Link>
+            <button
+              className="p-2 hover:text-[#a87c4f] transition-colors"
+              aria-label="Customer Account"
+            >
+              <User className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== "undefined")
+                  window.location.href = "/#checkout";
+              }}
+              className="p-2 hover:text-[#a87c4f] transition-colors relative"
+              aria-label="View Shopping Cart"
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 bg-[#a87c4f] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Storefront Body */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 space-y-20 flex-1">
-        {/* 3. Hero Section (Above the Fold) */}
-        <section
-          id="hero-section"
-          className="text-center max-w-4xl mx-auto space-y-6 pt-4 pb-2"
-        >
-          <div className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-            <span>✦ Premium Curations • Limited Festive Stock</span>
-          </div>
+      {/* ========================================================
+          B. HERO BANNER CAROUSEL / SLIDER
+      ======================================================== */}
+      <HeroSlider className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10" />
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif font-bold text-[#141412] leading-[1.15] text-balance">
-            Make Your Space Feel Different.
-          </h1>
-
-          <p className="text-base sm:text-lg text-[#6b6963] leading-relaxed max-w-2xl mx-auto">
-            We source premium, aesthetically striking home décor pieces for
-            people who want their everyday spaces to feel a little more special.
-            No overwhelming catalogs—just carefully selected items that look
-            good, feel right, and are worth every rupee.
-          </p>
-
-          <div className="pt-2 space-y-3">
-            <button
-              onClick={handleBuyHeroBundle}
-              className="inline-flex items-center justify-center gap-2 py-4 px-8 bg-[#141412] hover:bg-[#2b2823] text-[#f6f3ec] rounded-xl font-semibold text-sm transition-all shadow-md active:scale-[0.99]"
-            >
-              <span>Shop the Festive Collection →</span>
-            </button>
-
-            <div className="flex items-center justify-center gap-3 text-xs text-[#6b6963] font-medium pt-1">
-              <span>✓ Secure Checkout</span>
-              <span>|</span>
-              <span>✓ Cash on Delivery</span>
-              <span>|</span>
-              <span>✓ Easy Replacements</span>
-            </div>
-          </div>
-        </section>
-
-        {/* 4. Single-Product Hero Drop */}
-        <section
-          id="hero-drop"
-          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start pt-4 border-t border-[#e7e1d6]/70"
-        >
-          <div className="lg:col-span-7 space-y-4">
-            <div className="relative">
-              <ProductVisual
-                type={heroProduct.imageSvgType}
-                className="shadow-lg"
-              />
-              <div className="absolute top-4 right-4 bg-[#141412]/90 text-[#f6f3ec] px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-1.5 backdrop-blur-xs border border-[#b48849]/40">
-                <Flame className="w-3.5 h-3.5 text-[#b48849]" />
-                <span>{heroProduct.badge}</span>
-              </div>
-            </div>
-
-            <div className="bg-white/60 border border-[#e7e1d6] rounded-xl p-5 space-y-3 text-xs sm:text-sm">
-              <p className="font-semibold text-[#141412] leading-snug">
-                <span className="text-[#b48849] font-bold uppercase tracking-wider text-[11px] block mb-1">
-                  The Hook
-                </span>
-                {heroProduct.hook}
-              </p>
-              <p className="text-[#6b6963] leading-relaxed">
-                <strong className="text-[#141412]">The Details: </strong>
-                {heroProduct.details}
-              </p>
-              <p className="text-[#6b6963] leading-relaxed">
-                <strong className="text-[#141412]">Why It Works: </strong>
-                {heroProduct.whyItWorks}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              {heroProduct.features.map((feat, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-start gap-2 text-xs text-[#6b6963]"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[#b48849] shrink-0 mt-0.5" />
-                  <span>{feat}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 bg-white/70 border border-[#e7e1d6] rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-xs text-[#b48849] font-semibold tracking-wider uppercase">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Hero Product of the Season</span>
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#141412] leading-tight">
-                {heroProduct.title}
-              </h2>
-              <p className="text-xs sm:text-sm text-[#6b6963] leading-relaxed">
-                {heroProduct.subtitle}
-              </p>
-            </div>
-
-            <div className="flex items-baseline gap-3 pb-3 border-b border-[#e7e1d6]">
-              <span className="text-3xl sm:text-4xl font-bold font-serif text-[#141412] tabular-nums">
-                ₹{selectedBundle.price.toLocaleString("en-IN")}
-              </span>
-              <span className="text-base text-[#6b6963] line-through tabular-nums">
-                ₹
-                {(
-                  heroProduct.originalPrice * selectedBundle.quantity
-                ).toLocaleString("en-IN")}
-              </span>
-              <span className="text-xs font-bold text-[#b48849] bg-[#fbf9f4] px-2 py-0.5 rounded border border-[#b48849]/30 uppercase">
-                Save {selectedBundle.discountPercent}%
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-semibold text-[#141412] uppercase tracking-wider">
-                  Bundle Upsell (The "Best Value" Offer)
-                </span>
-                <span className="text-[#b48849] font-medium">
-                  Free Fast Shipping
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {heroProduct.bundles.map((bundle) => {
-                  const isSelected = selectedBundle.id === bundle.id;
-                  return (
-                    <div
-                      key={bundle.id}
-                      onClick={() => setSelectedBundle(bundle)}
-                      className={`relative p-3.5 rounded-xl border cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-[#b48849] bg-[#fbf9f4] ring-1 ring-[#b48849] shadow-xs"
-                          : "border-[#e7e1d6] bg-white hover:border-[#b48849]/40"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                              isSelected
-                                ? "border-[#b48849] bg-[#b48849]"
-                                : "border-[#6b6963]/50 bg-white"
-                            }`}
-                          >
-                            {isSelected && (
-                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-bold text-xs text-[#141412]">
-                              {bundle.title}
-                            </div>
-                            <div className="text-[11px] text-[#6b6963]">
-                              {bundle.subtitle}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="font-bold text-sm tabular-nums text-[#141412]">
-                            ₹{bundle.price.toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                      </div>
-
-                      {bundle.isPopular && (
-                        <div className="absolute -top-2.5 right-4 bg-[#b48849] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-2xs">
-                          Best Value Offer
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <button
-                onClick={handleBuyHeroBundle}
-                className="w-full py-4 px-6 bg-[#141412] hover:bg-[#2b2823] text-[#f6f3ec] rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-md active:scale-[0.99]"
-              >
-                <span>
-                  BUY NOW • ₹{selectedBundle.price.toLocaleString("en-IN")} •
-                  COD AVAILABLE
-                </span>
-                <ArrowRight className="w-4 h-4 text-[#b48849]" />
-              </button>
-
-              <div className="flex items-center justify-center gap-4 text-[11px] text-[#6b6963]">
-                <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#b48849]" />
-                  Pay on Delivery
-                </span>
-                <span>·</span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-[#b48849]" />
-                  Dispatches in 24 Hours
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* 5. The "Why Us" Value Proposition Grid */}
-        <section id="why-us" className="space-y-6">
-          <div className="text-center space-y-1">
-            <span className="text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-              The ShiftStore Difference
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#141412]">
-              Why Discerning Homes Choose Us
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {VALUE_PROPOSITIONS.map((prop, idx) => (
-              <div
-                key={idx}
-                className="bg-white/70 border border-[#e7e1d6] rounded-xl p-6 shadow-2xs space-y-3"
-              >
-                <div className="w-10 h-10 rounded-lg bg-[#f0ece1] flex items-center justify-center text-[#b48849] border border-[#e7e1d6]">
-                  {idx === 0 && <Truck className="w-5 h-5" />}
-                  {idx === 1 && <PackageCheck className="w-5 h-5" />}
-                  {idx === 2 && <Lock className="w-5 h-5" />}
-                  {idx === 3 && <RotateCcw className="w-5 h-5" />}
-                </div>
-                <h3 className="font-serif font-bold text-base text-[#141412]">
-                  {prop.title}
-                </h3>
-                <p className="text-xs text-[#6b6963] leading-relaxed">
-                  {prop.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 6. Curated Catalog Section */}
-        <section id="festive-catalog" className="space-y-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 border-b border-[#e7e1d6] pb-4">
-            <div>
-              <span className="text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-                Aesthetic Curations
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#141412]">
-                The Festive Catalog
-              </h2>
-            </div>
-            <p className="text-xs text-[#6b6963]">
-              Siliguri fulfillment hub · Dispatched within 24 hours
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products.map((prod) => (
-              <div
-                key={prod.id}
-                className="bg-white/70 border border-[#e7e1d6] rounded-xl overflow-hidden shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="p-3">
-                    <ProductVisual
-                      type={prod.imageSvgType}
-                      badge={prod.badge}
-                    />
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <h3 className="font-serif font-bold text-base text-[#141412] group-hover:text-[#b48849] transition-colors">
-                      {prod.title}
-                    </h3>
-                    <p className="text-xs text-[#6b6963] line-clamp-2">
-                      {prod.hook || prod.subtitle}
-                    </p>
-                    {prod.deliveryNote && (
-                      <p className="text-[11px] text-[#b48849] font-medium pt-1">
-                        {prod.deliveryNote}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 pt-0">
-                  <div className="flex items-baseline gap-2 mb-3">
-                    <span className="text-lg font-bold font-serif tabular-nums text-[#141412]">
-                      ₹{prod.salePrice.toLocaleString("en-IN")}
-                    </span>
-                    <span className="text-xs text-[#6b6963] line-through tabular-nums">
-                      ₹{prod.originalPrice.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => handleBuyCatalogItem(prod)}
-                    className="w-full py-2.5 px-3 bg-[#141412] hover:bg-[#2b2823] text-[#f6f3ec] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5 text-[#b48849]" />
-                    <span>Quick Order · COD</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 7. The ShiftStore Story (About Us) */}
-        <section
-          id="about-story"
-          className="bg-white/80 border border-[#e7e1d6] rounded-2xl p-6 sm:p-10 space-y-8 shadow-xs"
-        >
-          <div className="space-y-2 text-center max-w-2xl mx-auto">
-            <span className="text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-              The ShiftStore Story
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#141412]">
-              {SHIFTSTORE_STORY.headline}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs sm:text-sm text-[#6b6963] leading-relaxed pt-2">
-            <div className="space-y-3 bg-[#f0ece1]/40 p-6 rounded-xl border border-[#e7e1d6]">
-              <h3 className="font-serif font-bold text-lg text-[#141412]">
-                {SHIFTSTORE_STORY.vision.title}
-              </h3>
-              <p>{SHIFTSTORE_STORY.vision.text}</p>
-            </div>
-
-            <div className="space-y-3 bg-[#f0ece1]/40 p-6 rounded-xl border border-[#e7e1d6]">
-              <h3 className="font-serif font-bold text-lg text-[#141412]">
-                {SHIFTSTORE_STORY.approach.title}
-              </h3>
-              <p>{SHIFTSTORE_STORY.approach.text}</p>
-            </div>
-          </div>
-
-          <div className="space-y-4 pt-4 border-t border-[#e7e1d6]">
-            <h3 className="font-serif font-bold text-xl text-center text-[#141412]">
-              The ShiftStore Promise
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {SHIFTSTORE_STORY.promises.map((p, idx) => (
-                <div
-                  key={idx}
-                  className="space-y-2 p-4 bg-white rounded-xl border border-[#e7e1d6]"
-                >
-                  <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-[#b48849] shrink-0" />
-                    <h4 className="font-semibold text-xs sm:text-sm text-[#141412]">
-                      {p.title}
-                    </h4>
-                  </div>
-                  <p className="text-xs text-[#6b6963] leading-relaxed">
-                    {p.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 8. Customer Reviews Section (Social Proof) */}
-        <section id="reviews" className="space-y-6">
-          <div className="text-center space-y-1">
-            <span className="text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-              Social Proof
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#141412]">
-              See Why Customers Say Yes.
-            </h2>
-            <div className="flex items-center justify-center gap-1 text-[#b48849] pt-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 fill-current" />
-              ))}
-              <span className="text-xs font-bold text-[#141412] ml-1.5">
-                5.0 / 5.0 Rating from Indian Buyers
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {INITIAL_REVIEWS.map((rev) => (
-              <div
-                key={rev.id}
-                className="bg-white/70 border border-[#e7e1d6] rounded-xl p-6 shadow-2xs space-y-4 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1 text-[#b48849]">
-                    {[...Array(rev.rating)].map((_, i) => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                    ))}
-                  </div>
-                  <p className="text-xs sm:text-sm text-[#141412] leading-relaxed italic">
-                    "{rev.comment}"
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-[#e7e1d6]/70 flex items-center justify-between">
-                  <span className="font-semibold text-xs text-[#141412]">
-                    — {rev.author}
-                  </span>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-xs border border-emerald-200">
-                    {rev.verifiedText}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 9. Customer Trust & FAQs */}
-        <section id="faqs" className="max-w-3xl mx-auto space-y-6">
-          <div className="text-center space-y-1">
-            <span className="text-xs font-semibold tracking-wider text-[#b48849] uppercase">
-              Customer Trust & Policies
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#141412]">
-              Frequently Asked Questions
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {FAQS_DATA.map((faq) => {
-              const isOpen = openFaqId === faq.id;
-              return (
-                <div
-                  key={faq.id}
-                  className="bg-white/80 border border-[#e7e1d6] rounded-xl overflow-hidden transition-all"
-                >
-                  <button
-                    onClick={() => setOpenFaqId(isOpen ? null : faq.id)}
-                    className="w-full p-4 text-left flex items-center justify-between text-xs sm:text-sm font-semibold text-[#141412] hover:bg-[#fbf9f4]"
-                  >
-                    <span>{faq.question}</span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-[#6b6963] transition-transform duration-200 ${
-                        isOpen ? "rotate-180 text-[#b48849]" : ""
-                      }`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-4 text-xs text-[#6b6963] leading-relaxed border-t border-[#e7e1d6]/60 pt-3">
-                      {faq.answer}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 10. Core Policies Strip */}
-        <section className="bg-[#f0ece1]/50 border border-[#e7e1d6] rounded-2xl p-6 sm:p-8 space-y-4">
-          <h3 className="font-serif font-bold text-lg text-center text-[#141412]">
-            Core Store Policies
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs text-[#6b6963]">
-            {CORE_POLICIES.map((policy, idx) => (
-              <div
-                key={idx}
-                className="space-y-1.5 p-4 bg-white/70 rounded-xl border border-[#e7e1d6]"
-              >
-                <h4 className="font-bold text-[#141412] uppercase tracking-wider text-[11px]">
-                  {policy.title}
-                </h4>
-                <p className="leading-relaxed">{policy.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      {/* 11. Mobile Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-[#f6f3ec]/95 backdrop-blur-md border-t border-[#e7e1d6] p-3 shadow-lg flex items-center gap-2">
-        <a
-          href="https://wa.me/919876543210?text=Namaste!%20I%20have%20a%20query%20about%20ordering%20from%20ShiftStore."
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-3 bg-[#25D366] text-white rounded-xl shadow-xs shrink-0 flex items-center justify-center"
-          aria-label="WhatsApp Order Assistance"
-        >
-          <MessageCircle className="w-5 h-5" />
-        </a>
-
-        <button
-          onClick={handleBuyHeroBundle}
-          className="flex-1 py-3 px-4 bg-[#141412] active:bg-[#2b2823] text-[#f6f3ec] rounded-xl font-bold text-xs flex items-center justify-center gap-2 uppercase tracking-wider"
-        >
-          <span>
-            BUY NOW • ₹{selectedBundle.price.toLocaleString("en-IN")} • COD
+      {/* ========================================================
+          C. CIRCULAR CATEGORIES
+      ======================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-12 w-full">
+        <div className="text-center mb-8">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#a87c4f]">
+            Browse By Space
           </span>
-        </button>
-      </div>
+          <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#3d281a] mt-1">
+            Explore Categories
+          </h2>
+        </div>
 
-      {/* 12. Footnote */}
-      <footer className="mt-16 border-t border-[#e7e1d6] py-8 text-center text-xs text-[#6b6963] max-w-7xl mx-auto px-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>
-            © 2026 ShiftStore India. Founded in Siliguri, West Bengal. All
-            rights reserved.
+        {/* Horizontal flex row of circular image thumbnails */}
+        <div className="flex items-center justify-start sm:justify-center gap-6 sm:gap-10 overflow-x-auto pb-4 pt-2 no-scrollbar px-2">
+          {CIRCULAR_CATEGORIES.map((cat, idx) => (
+            <Link
+              key={idx}
+              href={cat.href}
+              className="flex flex-col items-center gap-3 shrink-0 group focus:outline-none"
+            >
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 border-2 border-[#e8e1d7] group-hover:border-[#a87c4f] transition-all duration-300 shadow-2xs group-hover:shadow-md bg-white">
+                <div className="w-full h-full rounded-full overflow-hidden bg-[#f5f1eb]">
+                  <img
+                    src={cat.image}
+                    alt={cat.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-[#3d281a] group-hover:text-[#a87c4f] transition-colors text-center tracking-wide">
+                {cat.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================
+          D. PRODUCT GRIDS / CAROUSELS (3 Distinct Sections)
+      ======================================================== */}
+      {/* SECTION 1: Festive Collection */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-[#e8e1d7]">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#a87c4f]">
+              Durga Puja Specials
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#3d281a] mt-1">
+              Festive Collection
+            </h2>
+          </div>
+          <Link
+            href="/shop?cat=Festive"
+            className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] hover:text-[#3d281a] flex items-center gap-1 mt-2 sm:mt-0 transition-colors"
+          >
+            <span>View All Festive</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* 4-Column Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {FESTIVE_COLLECTION.map((prod) => (
+            <ProductCard
+              key={prod.id}
+              id={prod.id}
+              title={prod.title}
+              slug={prod.slug}
+              category={prod.category}
+              price={prod.price}
+              originalPrice={prod.originalPrice}
+              image={prod.image}
+              badge={prod.badge}
+              inStock={prod.inStock}
+              onAddToCart={handleAddToCart}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 2: Our Handpicked Collection */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-[#e8e1d7]">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#a87c4f]">
+              Curator’s Choice
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#3d281a] mt-1">
+              Our Handpicked Collection
+            </h2>
+          </div>
+          <Link
+            href="/shop"
+            className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] hover:text-[#3d281a] flex items-center gap-1 mt-2 sm:mt-0 transition-colors"
+          >
+            <span>Explore Handpicked</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* 4-Column Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {HANDPICKED_COLLECTION.map((prod) => (
+            <ProductCard
+              key={prod.id}
+              id={prod.id}
+              title={prod.title}
+              slug={prod.slug}
+              category={prod.category}
+              price={prod.price}
+              originalPrice={prod.originalPrice}
+              image={prod.image}
+              badge={prod.badge}
+              inStock={prod.inStock}
+              onAddToCart={handleAddToCart}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 3: Premium Decor */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-10 w-full">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 pb-4 border-b border-[#e8e1d7]">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#a87c4f]">
+              Architectural Statements
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#3d281a] mt-1">
+              Premium Decor
+            </h2>
+          </div>
+          <Link
+            href="/shop?cat=Decor"
+            className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] hover:text-[#3d281a] flex items-center gap-1 mt-2 sm:mt-0 transition-colors"
+          >
+            <span>View All Decor</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* 4-Column Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {PREMIUM_DECOR.map((prod) => (
+            <ProductCard
+              key={prod.id}
+              id={prod.id}
+              title={prod.title}
+              slug={prod.slug}
+              category={prod.category}
+              price={prod.price}
+              originalPrice={prod.originalPrice}
+              image={prod.image}
+              badge={prod.badge}
+              inStock={prod.inStock}
+              onAddToCart={handleAddToCart}
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================
+          E. SHOP BY THEME (Grid of 6 Large Circular Buttons)
+      ======================================================== */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-14 w-full bg-[#f8f5ee] rounded-2xl border border-[#e8e1d7] my-8">
+        <div className="text-center mb-10">
+          <span className="text-xs font-bold uppercase tracking-widest text-[#a87c4f]">
+            Curated Aesthetics
+          </span>
+          <h2 className="text-3xl font-serif font-bold text-[#3d281a] mt-1">
+            Shop By Theme
+          </h2>
+          <p className="text-xs text-[#73685e] mt-1">
+            Find the pieces that match your home's personality and design
+            language.
           </p>
-          <div className="flex items-center gap-4">
-            <a href="/about" className="hover:text-[#141412] underline">
-              Our Story
-            </a>
-            <span>·</span>
-            <a href="/contact" className="hover:text-[#141412] underline">
-              Contact Us
-            </a>
-            <span>·</span>
-            <a href="/policies" className="hover:text-[#141412] underline">
-              Store Policies
-            </a>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-8 justify-items-center">
+          {THEMES.map((theme, idx) => (
+            <Link
+              key={idx}
+              href={`/shop?theme=${encodeURIComponent(theme.name)}`}
+              className="flex flex-col items-center gap-3 group focus:outline-none"
+            >
+              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full p-1.5 border-2 border-[#e8e1d7] group-hover:border-[#a87c4f] transition-all duration-300 shadow-xs group-hover:shadow-lg bg-white">
+                <div className="w-full h-full rounded-full overflow-hidden bg-[#ebe4d6]">
+                  <img
+                    src={theme.image}
+                    alt={theme.name}
+                    className="w-full h-full object-cover group-hover:scale-115 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-[#3d281a] group-hover:text-[#a87c4f] transition-colors text-center tracking-wide">
+                {theme.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* ========================================================
+          F. DARK FOOTER (#2c1c11)
+      ======================================================== */}
+      <footer className="mt-auto bg-[#2c1c11] text-[#fcfcf7] pt-16 pb-8 border-t border-[#3d281a] w-full">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-12 border-b border-[#3d281a]/40">
+            {/* Col 1: About Us */}
+            <div className="space-y-3">
+              <h4 className="font-serif text-xl font-bold text-[#fcfcf7]">
+                ShiftStore
+              </h4>
+              <p className="text-xs text-[#c4b9b0] leading-relaxed">
+                We design and curate warm, minimalist home decor objects that
+                ground your room in quiet beauty. Every parcel is safely wrapped
+                and dispatched directly from our Siliguri fulfillment center.
+              </p>
+              <p className="text-[11px] text-[#a87c4f] font-medium">
+                ⚡ Dispatched within 24 Hours across India.
+              </p>
+            </div>
+
+            {/* Col 2: Quick Links */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] mb-4">
+                Quick Links
+              </h4>
+              <ul className="space-y-2.5 text-xs text-[#c4b9b0]">
+                <li>
+                  <Link href="/" className="hover:text-white transition-colors">
+                    Home
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/shop"
+                    className="hover:text-white transition-colors"
+                  >
+                    Shop All Products
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/shop?cat=Festive"
+                    className="hover:text-white transition-colors"
+                  >
+                    Festive Collection
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/about"
+                    className="hover:text-white transition-colors"
+                  >
+                    Our Story
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/contact"
+                    className="hover:text-white transition-colors"
+                  >
+                    Contact Us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 3: Policies */}
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] mb-4">
+                Customer Care & Policies
+              </h4>
+              <ul className="space-y-2.5 text-xs text-[#c4b9b0]">
+                <li>
+                  <Link
+                    href="/policies"
+                    className="hover:text-white transition-colors"
+                  >
+                    Shipping & Delivery Timeline
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/policies"
+                    className="hover:text-white transition-colors"
+                  >
+                    7-Day Easy Replacements
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/policies"
+                    className="hover:text-white transition-colors"
+                  >
+                    Cash on Delivery (COD) Terms
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/policies"
+                    className="hover:text-white transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/policies"
+                    className="hover:text-white transition-colors"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Col 4: Newsletter / Connect */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#a87c4f] mb-4">
+                Join the Inner Circle
+              </h4>
+              <p className="text-xs text-[#c4b9b0] leading-relaxed">
+                Receive secret previews of limited single-piece hero drops and
+                seasonal festive discount codes.
+              </p>
+              <div className="flex items-center gap-1.5 pt-1">
+                <input
+                  type="email"
+                  placeholder="Your email address"
+                  className="px-3 py-2 bg-[#3d281a] border border-[#a87c4f]/30 rounded-md text-xs text-[#fcfcf7] placeholder:text-[#9c948b] flex-1 focus:outline-none focus:border-[#a87c4f]"
+                />
+                <button
+                  type="button"
+                  className="p-2 bg-[#a87c4f] hover:bg-[#b88c5f] text-white rounded-md text-xs font-bold transition-colors"
+                  aria-label="Subscribe to newsletter"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Copyright Bottom Bar */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#9c948b] gap-2">
+            <p>
+              © 2026 ShiftStore India. All rights reserved. Crafted with care.
+            </p>
+            <p>
+              100% Encrypted Checkout · Cash on Delivery · Express Air Shipping
+            </p>
           </div>
         </div>
       </footer>
-
-      {/* Checkout Modal */}
-      <CheckoutModal
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        items={checkoutItems}
-        onOrderSuccess={(ord: any) => setConfirmedOrder(ord)}
-      />
-
-      {/* Order Confirmed Modal */}
-      {confirmedOrder && (
-        <OrderSuccessModal
-          order={confirmedOrder}
-          onClose={() => setConfirmedOrder(null)}
-        />
-      )}
     </div>
   );
 }
