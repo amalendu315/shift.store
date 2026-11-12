@@ -17,5 +17,16 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/admin.tsx",
+    "src/lib.ts",
+    "src/ui.tsx",
+    "server.ts",
+    "backend/**/*.ts",
+    "vite.config.ts"
+  ],
+  "exclude": ["node_modules", "dist", "legacy"]
 }

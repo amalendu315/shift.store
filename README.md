@@ -1,108 +1,69 @@
-# ShiftStore Production Launch Guide (Durga Puja 48-Hour Playbook)
+# ShiftStore
 
-This guide provides the exact commands, configuration, and architectural walkthrough to launch ShiftStore to production in under 5 minutes.
+A React + Vite storefront with an Express API and a persistent SQLite database. There are two distinct areas:
 
----
+- `/` — public store, collection, product pages, bag, checkout, contact, and policies.
+- `/admin` — authenticated store workspace: products, inventory, orders, inbox, settings, and password management.
 
-## 1. Local Development Setup
+## Run locally
 
-### Prerequisites
-- Node.js 18+ or 20+
-- npm or pnpm or bun
+Requires **Node 22.13+** (uses Node's built-in `node:sqlite`).
 
-### Step-by-Step CLI Execution
-```bash
-# 1. Install dependencies
+```sh
 npm install
-
-# 2. Copy environment file
-cp .env.example .env
-
-# 3. Initialize SQLite Database & Prisma Client
-npx prisma generate
-npx prisma db push
-
-# 4. Seed Database with Hero Drop, Bundles & Admin User
-npx tsx prisma/seed.ts
-
-# 5. Start Development Server (Full-Stack Express + Vite)
 npm run dev
 ```
 
-The application will be live at `http://localhost:3000`.
+Open http://localhost:3000. `npm run dev` starts both the frontend and the backend.
 
----
+The first launch creates `data/shiftstore.sqlite` and one administrator. There are **no seeded products, orders, reviews, or customer messages**. Initial credentials are in `data/bootstrap-admin.txt`, a local file with owner-only permissions. Sign in at `/admin` and change the password in Settings. Credentials are never included in the frontend bundle or Git.
 
-## 2. Environment Variables (.env)
+Copy `.env.example` to `.env.local` if you want to configure the port, storage directory, admin email, or initial password before first launch. Environment admin settings only apply to an empty database. An existing administrator is never silently reset on restart.
 
-```env
-# Database: SQLite local path (or Turso libSQL url for serverless edge)
-DATABASE_URL=""
+## Working with the store
 
-# Admin Authentication
-ADMIN_EMAIL=""
-ADMIN_PASSWORD_HASH=""
-ADMIN_DEFAULT_PASSWORD=""
-SESSION_SECRET=""
+1. Sign in and add your contact details, delivery charges, and policies under Settings.
+2. Create products with descriptions, categories, prices, stock, and images. Upload PNG/JPEG/WebP images up to 5 MB, or use HTTPS image URLs.
+3. Save products as drafts or publish them to the collection. Featured products appear first.
+4. Customers add published products to their bag and place COD orders. Prices are calculated on the server in integer paise. Stock is reserved atomically, and duplicate requests with the same checkout key do not create duplicate orders.
+5. Manage confirmed orders through Shipped → Delivered. Delivered COD orders are recorded as paid. Cancelling an unpaid order restores inventory once.
+6. Customer contact messages are saved to Inbox. The app does not send email or SMS notifications.
 
-# Razorpay Payment Gateway (Test or Production live keys)
-NEXT_PUBLIC_RAZORPAY_KEY_ID=""
-RAZORPAY_KEY_SECRET=""
+## Storage and authentication
 
-# Store & WhatsApp Configuration
-NEXT_PUBLIC_STORE_NAME=""
-NEXT_PUBLIC_SUPPORT_PHONE=""
-NEXT_PUBLIC_WHATSAPP_NUMBER=""
-NEXT_PUBLIC_CURRENCY_SYMBOL=""
+- SQLite runs in WAL mode. The database, uploaded images, and initial credential file live inside `DATA_DIR` (default `./data`). Keep this directory on a persistent disk.
+- Passwords use salted scrypt. Sessions use random tokens stored hashed in the database and HttpOnly/SameSite cookies. Sessions expire after 24 hours; production cookies require HTTPS.
+- Every admin data and mutation endpoint requires authentication. Browser mutations enforce same-origin requests.
+- Login, checkout, contact, and password changes have basic per-process rate limits. Run one Node instance with this SQLite setup.
+- Orders retain product snapshots even if the product is later edited or deleted.
+- To back up, stop the app and copy the entire data directory. Restore it before restarting. Do not commit it.
 
-PORT=
-```
+## Payments
 
----
+Cashfree sandbox and COD are integrated. Add `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY`, and `CASHFREE_ENV=sandbox` to the ignored `.env.local`. Credentials remain on the server. Cashfree is selected on first configuration; thereafter Admin → Settings controls whether it is offered.
 
-## 3. Five-Minute Production Deployment
+Checkout creates the order server-side, reserves inventory, and opens Cashfree’s hosted checkout for UPI/cards/net banking. `/payment-return` verifies the result through Cashfree’s order API; a redirect alone never marks an order paid. Receipts are available at `/orders` in the browser used at checkout. Their private access tokens stay in that browser.
 
-### Option A: Self-Contained VPS (Hetzner, DigitalOcean, AWS EC2)
-Ideal for SQLite because disk latency is $\approx 0\text{ms}$ with zero external database connection overhead.
+For deployed testing, set `APP_ORIGIN` to the store origin and `CASHFREE_NOTIFY_URL=https://your-domain/api/payments/webhook/cashfree`. Configure/whitelist the checkout domain in Cashfree as required. The webhook verifies the raw-body HMAC signature, order/reference/amount/currency, and deduplicates payment events. Failed payment attempts can be retried. Checkout retries reuse the same payment session.
 
-```bash
-# 1. Clone repository on the VPS
-git clone https://github.com/your-brand/shiftstore.git /var/www/shiftstore
-cd /var/www/shiftstore
+Cashfree sessions expire after 30 minutes. An order-status check reconciles expired sessions and restores inventory once. Pending Cashfree orders cannot be manually cancelled while their remote payment session may still accept payment. Automatic background reconciliation and refund processing are not implemented; check pending orders through the customer status page. Before selling live, complete Cashfree onboarding/domain setup, configure HTTPS webhooks, replace sandbox keys with production credentials, and test the full live lifecycle.
 
-# 2. Install production dependencies and build
-npm ci
+`backend/payments.ts` keeps the integration replaceable: adapters implement `createPayment`, `verifyWebhook`, and optionally `getPayment`. Providers can return a hosted HTTPS redirect URL or a session ID with their checkout mode. Register another adapter in `paymentProviders`, add its client SDK launcher when required, and select it in Admin Settings. See `backend/cashfree.ts` for the working reference.
+
+## Demo preview
+
+`/` and `/shop` read only published products from SQLite. `/admin` manages the real catalog. `/demo` is a separate illustrative storefront: its eight sample products live in `src/demo.ts`, never in SQLite. Demo carts/wishlists are separate and order submission is disabled. Search, category/price filters, sorting, product pages, cart, and checkout preview can be explored there. Replace illustrative photography with your own product images when publishing your catalog.
+
+## Checks and production
+
+```sh
+npm test
 npm run build
-
-# 3. Setup persistent database
-npx prisma db push
-npx tsx prisma/seed.ts
-
-# 4. Run with PM2 Process Manager
-npm install -g pm2
-pm2 start server.ts --name "shiftstore" --interpreter tsx
-pm2 save
-pm2 startup
-
-# 5. Setup Nginx Reverse Proxy with SSL (Certbot)
-# Proxy pass port 3000 to your domain (e.g., shiftstore.in)
+npm start
 ```
 
-### Option B: Vercel Deployment (Next.js App Router + Turso / libSQL)
-If deploying directly as a Next.js 14 App Router project on Vercel:
-1. Push code to GitHub.
-2. In `prisma/schema.prisma`, change `provider = "sqlite"` to Turso/libSQL or PostgreSQL (`provider = "postgresql"`).
-3. Connect repo to Vercel and define environment variables from `.env.example`.
-4. Deploy! All Server Actions (`actions/order.ts`, `actions/pincode.ts`) and Route Handlers (`app/api/razorpay/verify/route.ts`) are 100% native Next.js 14 App Router primitives.
+Tests run against a temporary database and do not touch your store. They cover authentication, product publication, server-side totals, duplicate requests, inventory handling, order transitions, settings, inbox, and provider webhook checks. Browser QA was performed with a separate test store, including create/publish → bag → COD checkout → admin order receipt.
 
----
+For production, set `APP_ORIGIN=https://your-domain`, run behind HTTPS, and preserve `DATA_DIR`. Set `HOST=0.0.0.0` only if your hosting environment requires it. Use a persistent Node host; this SQLite server is not a static-only or ephemeral serverless deployment. If using one trusted reverse proxy, set `TRUST_PROXY=1` so rate limiting uses the forwarded client IP. Keep the Node process inaccessible to untrusted direct traffic in that configuration.
 
-## 4. Admin Access & Credentials
-- **URL**: `/admin` (or `/admin/login`)
-- **Default Email**: ``
-- **Default Password**: ``
-- **Capabilities**:
-  - Live KPI Revenue, Orders, Pending COD counts, and CRO rate.
-  - 1-Click WhatsApp Customer Confirmation (`wa.me/{phone}?text=...`).
-  - Inline order status progression (`NEW` $\to$ `CONFIRMED` $\to$ `SHIPPED` $\to$ `DELIVERED`).
-  - Promote catalog products to Hero Drop of the day and adjust prices on the fly.
+The former Next.js/demo implementation is retained under `legacy/` for reference and is not routed, imported, built, or served. The active implementation is `src/App.tsx`, `src/admin.tsx`, `server.ts`, and `backend/`.
